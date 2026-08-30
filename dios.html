@@ -83,10 +83,44 @@
   }
   .search-btn:hover { background:#1ad4ff; }
 
+  /* ── AI ANSWER ── */
+  .ai-block {
+    position:relative; z-index:1;
+    margin:24px 32px 0;
+    max-width:860px;
+    background:rgba(11,24,40,0.9);
+    border:1px solid var(--blue);
+    border-radius:8px;
+    padding:20px 24px;
+    box-shadow:0 0 20px rgba(20,184,224,0.15);
+    display:none;
+  }
+  .ai-block.visible { display:block; }
+  .ai-header {
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+    font-size:11px; letter-spacing:0.25em; color:var(--blue);
+    text-transform:uppercase;
+  }
+  .ai-dot {
+    width:6px;height:6px;border-radius:50%;
+    background:var(--yellow);
+    box-shadow:0 0 8px rgba(242,204,80,0.8);
+    animation:pulse 2s ease infinite;
+  }
+  .ai-text {
+    font-size:13px; color:var(--text); line-height:1.8;
+    font-weight:300; white-space:pre-wrap;
+  }
+  .ai-typing::after {
+    content:'▋';
+    animation:blink 0.8s step-end infinite;
+    color:var(--blue);
+  }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
   /* ── MAIN ── */
   .main { position:relative; z-index:1; padding:32px 32px 80px; max-width:860px; }
-
-  /* ── STATS ── */
   .stats {
     font-size:11px; color:var(--faint); letter-spacing:0.15em;
     margin-bottom:20px;
@@ -206,6 +240,12 @@
   </div>
 </header>
 
+<!-- AI ANSWER -->
+<div class="ai-block" id="ai-block">
+  <div class="ai-header"><div class="ai-dot"></div>DIOS AI · Qwen</div>
+  <div class="ai-text" id="ai-text"></div>
+</div>
+
 <!-- MAIN -->
 <main class="main">
   <div class="loader" id="loader">Шукаємо</div>
@@ -221,7 +261,24 @@
 </div>
 
 <script>
-const SERP_KEY = '76c69d47e8adea77dc4316f80a5a295641db8901d6764b5f8409c015313631f4';
+async function fetchAI(q) {
+  const block = document.getElementById('ai-block');
+  const textEl = document.getElementById('ai-text');
+  block.classList.add('visible');
+  textEl.textContent = '';
+  textEl.classList.add('ai-typing');
+
+  try {
+    const res = await fetch(`https://dios-ai.danikrut79.workers.dev/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    textEl.classList.remove('ai-typing');
+    if (data.choices?.[0]?.message?.content) {
+      textEl.textContent = data.choices[0].message.content;
+    }
+  } catch(e) {
+    block.classList.remove('visible');
+  }
+}
 
 let currentQuery = '';
 let currentPage  = 0;
@@ -234,6 +291,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('search-input').value = q;
     currentQuery = q;
     currentPage  = parseInt(params.get('page') || '0');
+    fetchAI(q);
     fetchResults(q, currentPage);
   }
   updateClock();
@@ -246,6 +304,7 @@ function doSearch() {
   currentQuery = q;
   currentPage  = 0;
   safePush(`q=${encodeURIComponent(q)}`);
+  fetchAI(q);
   fetchResults(q, 0);
 }
 
